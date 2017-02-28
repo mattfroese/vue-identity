@@ -1,5 +1,5 @@
 /**
-  * 0.0.1 v0.0.1
+  * vue-identity v0.0.1
   * (c) 2017 Matt Froese
   * @license MIT
   */
@@ -11,49 +11,39 @@
 
 /*jshint esversion: 6 */
 function error(e) {
-	var err = {};
+	var err = { code: -1, http: null };
 	if (e.status !== undefined) {
 		err.code = e.status;
 		err.error = e.statusText;
 		err.data = e.data ? e.data.errors : null;
 		err.http = e;
 		err.message = formatMessage(err);
-		if (err.code == 401 && err.http.headers.get('X-Authentication-Location')) {
-			err.redirect = err.http.headers.get('X-Authentication-Location');
-		}
 	} else if (typeof e == "string") {
-		err.code = -1;
-		err.message = e;
-		err.error = e;
-		err.http = null;
+		err.message = err.error = e;
 	} else {
-		err.code = -1;
-		err.message = e.message;
-		err.error = e.message;
-		err.http = null;
+		err.message = e.error = e.message;
 	}
 	console.error("[VueIdentity Error]", err);
-	return Promise.reject(err);
+	return Promise.reject(err)
 }
 
 function parseToken(token) {
-	var base64Url = token.split('.')[1];
-	var base64 = DanaMethodReplace("replace", DanaMethodReplace("replace", base64Url, '-', '+'), '_', '/');
-	return JSON.parse(window.atob(base64));
+  var base64Url = token.split('.')[1];
+  var base64 = base64Url.replace('-', '+').replace('_', '/');
+  return JSON.parse(window.atob(base64))
 }
 
 function formatMessage(e) {
 	// Custom
-	if (e.error == 'Connection Issue') { return 'Could not connect'; }
-	if (e.error == 'Bad Request') { return 'Invalid data'; }
-	if (e.error == 'Token Expired') { return 'Token Expired'; }
+	if (e.error == 'Connection Issue') { return 'Could not connect' }
+	if (e.error == 'Bad Request') { return 'Invalid data' }
+	if (e.error == 'Token Expired') { return 'Token Expired' }
 	// Standard http
-	if (e.code == 500) { return 'Server Error'; }
-	if (e.code == 404) { return 'Not Found'; }
-	if (e.code == 403) { return 'Forbidden'; }
-	if (e.code == 401) { return 'Unauthorized'; }
-
-	return 'Unknown error';
+	if (e.code == 500) { return 'Server Error' }
+	if (e.code == 404) { return 'Not Found' }
+	if (e.code == 403) { return 'Forbidden' }
+	if (e.code == 401) { return 'Unauthorized' }
+	return 'Unknown error'
 }
 
 var identity = {
@@ -75,7 +65,7 @@ var identity = {
     // setup
     var vm = new Vue({
       data: {
-        refreshToken: null,
+        refreshToken: window.localStorage['vue-identity:refreshToken'] || null,
         accessToken: null,
         expires: null,
         user: null,
@@ -113,9 +103,7 @@ var identity = {
         if (to.meta.identity && $identity.user === null) {
           $identity.authenticate().then(function() {
             next();
-          }, function(e) {
-            if (e.redirect)
-              { window.location.href = e.redirect; }
+          }, function() {
             if (options.unauthorizedRedirect)
               { next({
                 path: options.unauthorizedRedirect
@@ -137,7 +125,7 @@ var identity = {
       return options.url + options[endpoint + 'Url']
     };
     self.authenticate = function() {
-      if (self.tokenValid()) { return Promise.resolve() }
+      if (self.refreshToken) { return Promise.resolve() }
       var params = {};
       if (options.scope) { params.scope = options.scope; }
       if (options.redirect) { params.redirect = options.redirect; }
@@ -172,6 +160,8 @@ var identity = {
         self.receivethMightyToken(r.data);
         return Promise.resolve()
       }).catch(function(e) {
+        if (e.headers.get('X-Authentication-Location'))
+          { window.location.href = e.headers.get('X-Authentication-Location'); }
         return error(e)
       }).finally(function() {
         self.loading = false;
@@ -181,13 +171,13 @@ var identity = {
       var accessToken = tokenIsMightier[options.accessToken];
       var refreshToken = tokenIsMightier[options.refreshToken];
       if (accessToken == undefined) { return error('No token received') }
-      var decodedAccessToken = parseToken(accessToken);
+      var user = parseToken(accessToken);
       self.accessToken = accessToken;
-      self.user = tokenIsMightier.payload;
-      self.expires = decodedAccessToken.exp;
-      self.issuedAt = decodedAccessToken.iat;
-      self.notBefore = decodedAccessToken.nbf;
       self.refreshToken = refreshToken;
+      self.user = user;
+      self.expires = user.exp;
+      self.issuedAt = user.iat;
+      self.notBefore = user.nbf;
       self.attemptRefreshIn(self.expiresIn - 30000);
     };
     self.attemptRefreshIn = function(ms) {

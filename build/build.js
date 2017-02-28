@@ -10,7 +10,7 @@ const cjs = require('rollup-plugin-commonjs')
 const node = require('rollup-plugin-node-resolve')
 const replace = require('rollup-plugin-replace')
 const version = process.env.VERSION || require('../package.json').version
-const name = require('../package.json').version
+const name = require('../package.json').name
 const banner =
 `/**
   * ${name} v${version}
