@@ -22,7 +22,7 @@ const identity = {
     // setup
     var vm = new Vue({
       data: {
-        refreshToken: window.localStorage['vue-identity:refreshToken'] || null,
+        refreshToken: window.localStorage['vue-identity:refreshToken'],
         accessToken: null,
         expires: null,
         user: null,
