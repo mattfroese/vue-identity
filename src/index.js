@@ -49,7 +49,7 @@ const identity = {
       console.error('VueIdentity requires vue-resource. Make sure you Vue.use(VueResource) before Vue.use(VueIdentity)')
     }
     Vue.http.interceptors.push(function(request, next) {
-      request.headers.set('Authorization', 'Bearer ' + self.accessToken)
+      if( self.accessToken ) request.headers.set('Authorization', 'Bearer ' + self.accessToken)
       next()
     })
     if (!router) {
@@ -73,15 +73,15 @@ const identity = {
     }
 
     // bind events
-    window.onfocus = function() {
+    window.onfocus = () => {
       self.attemptRefresh()
     }
 
     // methods
-    self.uri = function(endpoint) {
+    self.uri = (endpoint) => {
       return options.url + options[endpoint + 'Url']
     }
-    self.authenticate = function() {
+    self.authenticate = () => {
       if (self.refreshToken) return Promise.resolve()
       var params = {}
       if (options.scope) params.scope = options.scope
@@ -91,18 +91,18 @@ const identity = {
         params: params
       }))
     }
-    self.refresh = function() {
+    self.refresh = () => {
       return self.attachRequestQuarterback(http.post(this.uri('refresh'), {
         token: self.refreshToken
       }))
     }
-    self.login = function(data) {
+    self.login = (data) => {
       return self.attachRequestQuarterback(http.post(this.uri('login'), data, {
         credentials: true,
         params: params
       }))
     }
-    self.logout = function() {
+    self.logout = () => {
       self.refreshToken = null
       self.accessToken = null
       self.user = null
@@ -111,20 +111,20 @@ const identity = {
       self.notBefore = null
       return Promise.resolve()
     }
-    self.attachRequestQuarterback = function(promise) {
+    self.attachRequestQuarterback = (promise) => {
       self.loading = true
-      return promise.then(function(r) {
+      return promise.then((r) => {
         self.receivethMightyToken(r.data)
         return Promise.resolve()
-      }).catch(function(e) {
+      }).catch((e) => {
         if (e.headers.get('X-Authentication-Location'))
           window.location.href = e.headers.get('X-Authentication-Location')
         return error(e)
-      }).finally(function() {
+      }).finally(() => {
         self.loading = false
       })
     }
-    self.receivethMightyToken = function(tokenIsMightier) {
+    self.receivethMightyToken = (tokenIsMightier) => {
       var accessToken = tokenIsMightier[options.accessToken]
       var refreshToken = tokenIsMightier[options.refreshToken]
       if (accessToken == undefined) return error('No token received')
@@ -137,25 +137,25 @@ const identity = {
       self.notBefore = user.nbf
       self.attemptRefreshIn(self.expiresIn - 30000)
     }
-    self.attemptRefreshIn = function(ms) {
+    self.attemptRefreshIn = (ms) => {
       clearTimeout(self.expiryTimer)
-      self.expiryTimer = setTimeout(function() {
+      self.expiryTimer = setTimeout(() => {
         self.attemptRefresh()
       }, ms)
     }
-    self.attemptRefresh = function() {
+    self.attemptRefresh = () => {
       var expiresIn = (self.expires * 1000) - Date.now()
 
       if (self.tokenValid() && expiresIn <= 300000) {
-        self.authenticate().catch(function() {
+        self.authenticate().catch(() => {
           clearInterval(self.expiryTimer)
         })
       }
     }
-    self.isLoggedIn = function() {
+    self.isLoggedIn = () => {
       return self.tokenValid()
     }
-    self.tokenValid = function() {
+    self.tokenValid = () => {
       return self.refreshToken && ((self.expires * 1000) - Date.now()) > 0
     }
   }
