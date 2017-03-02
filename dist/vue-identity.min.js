@@ -1,5 +1,5 @@
 /**
-  * vue-identity v0.0.3
+  * vue-identity v0.0.4
   * (c) 2017 Matt Froese
   * @license MIT
   */
