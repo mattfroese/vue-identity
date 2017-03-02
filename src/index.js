@@ -82,23 +82,35 @@ const identity = {
       return options.url + options[endpoint + 'Url']
     }
     self.authenticate = () => {
-      if (self.accessToken && self.tokenValid()) return Promise.resolve()
+      // I have a valid access token = good
+      if (self.isLoggedIn()) return Promise.resolve()
+
+      // Attempt to get an access token if I have a refresh token
+      // If refresh comes back as invalid, logout and call again to attempt loginWithCredentials
       if (self.refreshToken) return self.refresh().catch(()=>self.authenticate())
-      let params = {}
-      if (options.scope) params.scope = options.scope
-      if (options.redirect) params.redirect = options.redirect
-      return self.attachRequestQuarterback(http.get(self.uri('login'), {
-        credentials: true,
-        params: params
-      }))
+
+      // Attempt to get access token with credentials (Cookie based auth)
+      return self.loginWithCredentials()
     }
+    // Login with fresh token
     self.refresh = () => {
       return self.attachRequestQuarterback(http.post(self.uri('refresh'), {
         token: self.refreshToken
       }))
     }
+    // Login with data (username, password)
     self.login = (data) => {
       return self.attachRequestQuarterback(http.post(self.uri('login'), data, {
+        credentials: true,
+        params: params
+      }))
+    }
+    // Cookie based login
+    self.loginWithCredentials = () => {
+      let params = {}
+      if (options.scope) params.scope = options.scope
+      if (options.redirect) params.redirect = options.redirect
+      return self.attachRequestQuarterback(http.get(self.uri('login'), {
         credentials: true,
         params: params
       }))
