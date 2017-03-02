@@ -20,7 +20,7 @@ const identity = {
       return
     }
     // setup
-    var vm = new Vue({
+    let vm = new Vue({
       data: {
         refreshToken: window.localStorage['vue-identity:refreshToken'],
         accessToken: null,
@@ -56,7 +56,7 @@ const identity = {
       console.info('To use with vue-router, pass it to me Vue.use(VueIdentity, {router})')
     } else {
       router.beforeEach((to, from, next) => {
-        var $identity = options.router.app.$identity
+        let $identity = options.router.app.$identity
         if (to.meta.identity && $identity.user === null) {
           $identity.authenticate().then(function() {
             next()
@@ -83,7 +83,7 @@ const identity = {
     }
     self.authenticate = () => {
       if (self.refreshToken) return Promise.resolve()
-      var params = {}
+      let params = {}
       if (options.scope) params.scope = options.scope
       if (options.redirect) params.redirect = options.redirect
       return self.attachRequestQuarterback(http.get(this.uri('login'), {
@@ -125,10 +125,10 @@ const identity = {
       })
     }
     self.receivethMightyToken = (tokenIsMightier) => {
-      var accessToken = tokenIsMightier[options.accessToken]
-      var refreshToken = tokenIsMightier[options.refreshToken]
+      let accessToken = tokenIsMightier[options.accessToken]
+      let refreshToken = tokenIsMightier[options.refreshToken]
       if (accessToken == undefined) return error('No token received')
-      var user = parseToken(accessToken)
+      let user = parseToken(accessToken)
       self.accessToken = accessToken
       self.refreshToken = localStorage['vue-identity:refreshToken'] = refreshToken
       self.user = user
@@ -144,7 +144,7 @@ const identity = {
       }, ms)
     }
     self.attemptRefresh = () => {
-      var expiresIn = (self.expires * 1000) - Date.now()
+      let expiresIn = (self.expires * 1000) - Date.now()
 
       if (self.tokenValid() && expiresIn <= 300000) {
         self.authenticate().catch(() => {
