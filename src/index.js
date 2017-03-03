@@ -48,31 +48,17 @@ const identity = {
       console.error('VueIdentity requires vue-resource. Make sure you Vue.use(VueResource) before Vue.use(VueIdentity)')
     }
     Vue.http.interceptors.push(function(request, next) {
-      if( self.tokenValid() ) {
+      self.authenticate({ preventRedirect: true }).then(() => {
         request.headers.set('Authorization', 'Bearer ' + self.accessToken)
-      next()
-      } else if ( self.refreshToken ) {
-        self.refresh()
-          .then(() => next())
-          .catch(res => {
-            if(res.status % 400 < 100) // in the 400-499 range
-              return self
-                .loginWithCredentials({ preventRedirect: true })
-                .then(res => {
-                  self.receivethMightyToken(res.data)
-                  next()
-                })
-            else throw res.statusText
-          })
-      }
+        next()
+      })
     })
     if (!router) {
       console.info('To use with vue-router, pass it to me Vue.use(VueIdentity, {router})')
     } else {
       router.beforeEach((to, from, next) => {
-        let $identity = options.router.app.$identity
-        if (to.meta.identity && $identity.user === null) {
-          $identity.authenticate().then(function() {
+        if (to.meta.identity && self.isLoggedIn() === false) {
+          self.authenticate().then(function() {
             next()
           }, function() {
             if (options.unauthorizedRedirect)
@@ -90,7 +76,7 @@ const identity = {
     self.uri = (endpoint) => {
       return options.url + options[endpoint + 'Url']
     }
-    self.authenticate = () => {
+    self.authenticate = (options) => {
       // I have a valid access token = good
       if (self.isLoggedIn()) return Promise.resolve()
 
@@ -99,7 +85,7 @@ const identity = {
       if (self.refreshToken) return self.refresh().catch(() => self.authenticate())
 
       // Attempt to get access token with credentials (Cookie based auth)
-      return self.loginWithCredentials()
+      return self.loginWithCredentials(options)
     }
     // Login with fresh token
     self.refresh = () => {
