@@ -48,10 +48,14 @@ const identity = {
       console.error('VueIdentity requires vue-resource. Make sure you Vue.use(VueResource) before Vue.use(VueIdentity)')
     }
     Vue.http.interceptors.push(function(request, next) {
-      self.authenticate({ preventRedirect: true }).then(() => {
-        request.headers.set('Authorization', 'Bearer ' + self.accessToken)
-        next()
-      })
+      if(request.url === self.uri('login') || request.url === self.uri('refresh')) {
+        return next()
+      } else {
+        self.authenticate({ preventRedirect: true }).then(() => {
+          request.headers.set('Authorization', 'Bearer ' + self.accessToken)
+          next()
+        })
+      }
     })
     if (!router) {
       console.info('To use with vue-router, pass it to me Vue.use(VueIdentity, {router})')
