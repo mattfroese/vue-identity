@@ -48,8 +48,23 @@ const identity = {
       console.error('VueIdentity requires vue-resource. Make sure you Vue.use(VueResource) before Vue.use(VueIdentity)')
     }
     Vue.http.interceptors.push(function(request, next) {
-      if( self.accessToken ) request.headers.set('Authorization', 'Bearer ' + self.accessToken)
+      if( self.tokenValid() ) {
+        request.headers.set('Authorization', 'Bearer ' + self.accessToken)
       next()
+      } else if ( self.refreshToken ) {
+        self.refresh()
+          .then(() => next())
+          .catch(res => {
+            if(res.status % 400 < 100) // in the 400-499 range
+              return self
+                .loginWithCredentials({ preventRedirect: true })
+                .then(res => {
+                  self.receivethMightyToken(res.data)
+                  next()
+                })
+            else throw res.statusText
+          })
+      }
     })
     if (!router) {
       console.info('To use with vue-router, pass it to me Vue.use(VueIdentity, {router})')
@@ -100,14 +115,14 @@ const identity = {
       }))
     }
     // Cookie based login
-    self.loginWithCredentials = () => {
+    self.loginWithCredentials = (options) => {
       let params = {}
       if (options.scope) params.scope = options.scope
       if (options.redirect) params.redirect = options.redirect
       return self.attachRequestQuarterback(http.get(self.uri('login'), {
         credentials: true,
         params: params
-      }))
+      }), options)
     }
     self.logout = () => {
       delete localStorage['vue-identity:refreshToken']
@@ -119,14 +134,14 @@ const identity = {
       self.notBefore = null
       return Promise.resolve()
     }
-    self.attachRequestQuarterback = (promise) => {
+    self.attachRequestQuarterback = (promise, { preventRedirect }) => {
       self.loading = true
       return promise.then((r) => {
         self.receivethMightyToken(r.data)
         return Promise.resolve()
       }).catch((e) => {
         self.logout()
-        if (e.headers.get('X-Authentication-Location'))
+        if (e.headers.get('X-Authentication-Location') && !preventRedirect)
           window.location.href = e.headers.get('X-Authentication-Location')
         return error(e)
       }).finally(() => {
