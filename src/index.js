@@ -120,14 +120,15 @@ const identity = {
       self.notBefore = null
       return Promise.resolve()
     }
-    self.attachRequestQuarterback = (promise, { preventRedirect }) => {
+    self.attachRequestQuarterback = (promise, opts) => {
+      opts = opts || {}
       self.loading = true
       return promise.then((r) => {
         self.receivethMightyToken(r.data)
         return Promise.resolve()
       }).catch((e) => {
         self.logout()
-        if (e.headers.get('X-Authentication-Location') && !preventRedirect)
+        if (e.headers.get('X-Authentication-Location') && !opts.preventRedirect)
           window.location.href = e.headers.get('X-Authentication-Location')
         return error(e)
       }).finally(() => {
