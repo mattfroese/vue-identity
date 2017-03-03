@@ -72,10 +72,10 @@ const identity = {
       })
     }
 
-    // bind events
-    window.onfocus = () => {
-      self.attemptRefresh()
-    }
+    // // bind events
+    // window.onfocus = () => {
+    //   self.attemptRefresh()
+    // }
 
     // methods
     self.uri = (endpoint) => {
@@ -87,7 +87,7 @@ const identity = {
 
       // Attempt to get an access token if I have a refresh token
       // If refresh comes back as invalid, logout and call again to attempt loginWithCredentials
-      if (self.refreshToken) return self.refresh().catch(()=>self.authenticate())
+      if (self.refreshToken) return self.refresh().catch(() => self.authenticate())
 
       // Attempt to get access token with credentials (Cookie based auth)
       return self.loginWithCredentials()
@@ -154,10 +154,10 @@ const identity = {
     }
     self.attemptRefreshIn = (ms) => {
       console.info("attemptRefreshIn", ms)
-      clearTimeout(self.expiryTimer)
-      self.expiryTimer = setTimeout(() => {
-        self.attemptRefresh()
-      }, ms)
+      // clearTimeout(self.expiryTimer)
+      // self.expiryTimer = setTimeout(() => {
+      //   self.attemptRefresh()
+      // }, ms)
     }
     self.attemptRefresh = () => {
       let expiresIn = (self.expires * 1000) - Date.now()
