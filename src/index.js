@@ -29,8 +29,7 @@ const identity = {
         notBefore: null,
         issuedAt: null,
         loading: false,
-        checking: false,
-        expiryTimer: null
+        checking: false
       },
       computed: {
         expiresIn() {
@@ -49,16 +48,21 @@ const identity = {
       console.error('VueIdentity requires vue-resource. Make sure you Vue.use(VueResource) before Vue.use(VueIdentity)')
     }
     Vue.http.interceptors.push(function(request, next) {
-      if( self.accessToken ) request.headers.set('Authorization', 'Bearer ' + self.accessToken)
-      next()
+      if(request.url === self.uri('login') || request.url === self.uri('refresh')) {
+        return next()
+      } else {
+        self.authenticate({ preventRedirect: true }).then(() => {
+          request.headers.set('Authorization', 'Bearer ' + self.accessToken)
+          next()
+        })
+      }
     })
     if (!router) {
       console.info('To use with vue-router, pass it to me Vue.use(VueIdentity, {router})')
     } else {
       router.beforeEach((to, from, next) => {
-        let $identity = options.router.app.$identity
-        if (to.meta.identity && $identity.user === null) {
-          $identity.authenticate().then(function() {
+        if (to.meta.identity && self.isLoggedIn() === false) {
+          self.authenticate().then(function() {
             next()
           }, function() {
             if (options.unauthorizedRedirect)
@@ -72,25 +76,20 @@ const identity = {
       })
     }
 
-    // bind events
-    window.onfocus = () => {
-      self.attemptRefresh()
-    }
-
     // methods
     self.uri = (endpoint) => {
       return options.url + options[endpoint + 'Url']
     }
-    self.authenticate = () => {
+    self.authenticate = (options) => {
       // I have a valid access token = good
       if (self.isLoggedIn()) return Promise.resolve()
 
       // Attempt to get an access token if I have a refresh token
       // If refresh comes back as invalid, logout and call again to attempt loginWithCredentials
-      if (self.refreshToken) return self.refresh().catch(()=>self.authenticate())
+      if (self.refreshToken) return self.refresh().catch(() => self.authenticate())
 
       // Attempt to get access token with credentials (Cookie based auth)
-      return self.loginWithCredentials()
+      return self.loginWithCredentials(options)
     }
     // Login with fresh token
     self.refresh = () => {
@@ -106,14 +105,14 @@ const identity = {
       }))
     }
     // Cookie based login
-    self.loginWithCredentials = () => {
+    self.loginWithCredentials = (opts) => {
       let params = {}
       if (options.scope) params.scope = options.scope
       if (options.redirect) params.redirect = options.redirect
       return self.attachRequestQuarterback(http.get(self.uri('login'), {
         credentials: true,
         params: params
-      }))
+      }), opts)
     }
     self.logout = () => {
       delete localStorage['vue-identity:refreshToken']
@@ -125,14 +124,15 @@ const identity = {
       self.notBefore = null
       return Promise.resolve()
     }
-    self.attachRequestQuarterback = (promise) => {
+    self.attachRequestQuarterback = (promise, opts) => {
+      opts = opts || {}
       self.loading = true
       return promise.then((r) => {
         self.receivethMightyToken(r.data)
         return Promise.resolve()
       }).catch((e) => {
         self.logout()
-        if (e.headers.get('X-Authentication-Location'))
+        if (e.headers.get('X-Authentication-Location') && !opts.preventRedirect)
           window.location.href = e.headers.get('X-Authentication-Location')
         return error(e)
       }).finally(() => {
@@ -150,14 +150,6 @@ const identity = {
       self.expires = user.exp
       self.issuedAt = user.iat
       self.notBefore = user.nbf
-      self.attemptRefreshIn(self.expiresIn - 30000)
-    }
-    self.attemptRefreshIn = (ms) => {
-      console.info("attemptRefreshIn", ms)
-      clearTimeout(self.expiryTimer)
-      self.expiryTimer = setTimeout(() => {
-        self.attemptRefresh()
-      }, ms)
     }
     self.attemptRefresh = () => {
       let expiresIn = (self.expires * 1000) - Date.now()
@@ -165,9 +157,7 @@ const identity = {
 
       if (self.tokenValid() && expiresIn <= 300000) {
         console.info("attemptRefresh tokenValid expiresIn <= 300000", expiresIn)
-        self.refresh().catch(() => {
-          clearInterval(self.expiryTimer)
-        })
+        return self.refresh()
       }
     }
     self.isLoggedIn = () => {
