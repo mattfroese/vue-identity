@@ -101,14 +101,14 @@ const identity = {
       }))
     }
     // Cookie based login
-    self.loginWithCredentials = (options) => {
+    self.loginWithCredentials = (opts) => {
       let params = {}
       if (options.scope) params.scope = options.scope
       if (options.redirect) params.redirect = options.redirect
       return self.attachRequestQuarterback(http.get(self.uri('login'), {
         credentials: true,
         params: params
-      }), options)
+      }), opts)
     }
     self.logout = () => {
       delete localStorage['vue-identity:refreshToken']
