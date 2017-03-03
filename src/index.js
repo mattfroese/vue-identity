@@ -29,8 +29,7 @@ const identity = {
         notBefore: null,
         issuedAt: null,
         loading: false,
-        checking: false,
-        expiryTimer: null
+        checking: false
       },
       computed: {
         expiresIn() {
@@ -71,11 +70,6 @@ const identity = {
         }
       })
     }
-
-    // // bind events
-    // window.onfocus = () => {
-    //   self.attemptRefresh()
-    // }
 
     // methods
     self.uri = (endpoint) => {
@@ -150,14 +144,6 @@ const identity = {
       self.expires = user.exp
       self.issuedAt = user.iat
       self.notBefore = user.nbf
-      self.attemptRefreshIn(self.expiresIn - 30000)
-    }
-    self.attemptRefreshIn = (ms) => {
-      console.info("attemptRefreshIn", ms)
-      // clearTimeout(self.expiryTimer)
-      // self.expiryTimer = setTimeout(() => {
-      //   self.attemptRefresh()
-      // }, ms)
     }
     self.attemptRefresh = () => {
       let expiresIn = (self.expires * 1000) - Date.now()
@@ -165,9 +151,7 @@ const identity = {
 
       if (self.tokenValid() && expiresIn <= 300000) {
         console.info("attemptRefresh tokenValid expiresIn <= 300000", expiresIn)
-        self.refresh().catch(() => {
-          clearInterval(self.expiryTimer)
-        })
+        return self.refresh()
       }
     }
     self.isLoggedIn = () => {
