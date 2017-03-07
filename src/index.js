@@ -164,7 +164,7 @@ const identity = {
       return self.tokenValid()
     }
     self.tokenValid = () => {
-      return self.accessToken && ((self.expires * 1000) - Date.now()) > 0
+      return !!self.accessToken && ((self.expires * 1000) - Date.now()) > 0
     }
   }
 }
