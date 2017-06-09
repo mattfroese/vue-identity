@@ -25,3 +25,25 @@ pre {
   background: whiteSmoke;
   font-size: 1.2em;
 }
+
+input {
+  border: 1px solid #d2d2d2;
+  padding: 7px;
+  font-size: 1.1em;
+  border-radius: 4px;
+  display: block;
+  margin: 14px 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  color: #2c3e50;
+  width: 100%;
+}
+
+input[type=submit] {
+  padding: 7px;
+  font-size: 1.1em;
+  border-radius: 4px;
+  display: block;
+  color: #fff;
+  background: #86c173;
+  width: 100%;
+}

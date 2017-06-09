@@ -13,7 +13,7 @@ export function error(e) {
 		err.message = e.error = e.message
 	}
 	console.error("[VueIdentity Error]", err)
-	return Promise.reject(err)
+	return err
 }
 
 export function parseToken(token) {

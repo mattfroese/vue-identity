@@ -6,6 +6,8 @@ const WebpackConfig = require('./webpack.config')
 
 const app = express()
 
+const routes = require('./server.routes')
+
 app.use(webpackDevMiddleware(webpack(WebpackConfig), {
   publicPath: '/__build__/',
   stats: {
@@ -13,6 +15,7 @@ app.use(webpackDevMiddleware(webpack(WebpackConfig), {
     chunks: false
   }
 }))
+app.use('/api/', routes)
 
 const fs = require('fs')
 const path = require('path')

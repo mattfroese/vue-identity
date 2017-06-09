@@ -85,34 +85,33 @@ const identity = {
       if (self.isLoggedIn()) return Promise.resolve()
 
       // Attempt to get an access token if I have a refresh token
-      // If refresh comes back as invalid, logout and call again to attempt loginWithCredentials
+      // If refresh comes back as invalid, logout and call myself again
       if (self.refreshToken) return self.refresh().catch(() => self.authenticate())
 
       // Attempt to get access token with credentials (Cookie based auth)
-      return self.loginWithCredentials(options)
+      let params = {}
+      if (options && options.scope) params.scope = options.scope
+      if (options && options.redirect) params.redirect = options.redirect
+      return self.request(http.get(self.uri('login'), {
+        credentials: true, // attempt with http cookies
+        params: params
+      }), opts)
     }
     // Login with fresh token
     self.refresh = () => {
-      return self.attachRequestQuarterback(http.post(self.uri('refresh'), {
+      return self.request(http.post(self.uri('refresh'), {
         token: self.refreshToken
       }))
     }
     // Login with data (username, password)
     self.login = (data) => {
-      return self.attachRequestQuarterback(http.post(self.uri('login'), data, {
+      let params = {}
+      if (options && options.scope) params.scope = options.scope
+      if (options && options.redirect) params.redirect = options.redirect
+      return self.request(http.post(self.uri('login'), data, {
         credentials: true,
         params: params
       }))
-    }
-    // Cookie based login
-    self.loginWithCredentials = (opts) => {
-      let params = {}
-      if (options.scope) params.scope = options.scope
-      if (options.redirect) params.redirect = options.redirect
-      return self.attachRequestQuarterback(http.get(self.uri('login'), {
-        credentials: true,
-        params: params
-      }), opts)
     }
     self.logout = () => {
       delete localStorage['vue-identity:refreshToken']
@@ -124,25 +123,24 @@ const identity = {
       self.notBefore = null
       return Promise.resolve()
     }
-    self.attachRequestQuarterback = (promise, opts) => {
+    self.request = (promise, opts) => {
       opts = opts || {}
       self.loading = true
       return promise.then((r) => {
-        self.receivethMightyToken(r.data)
-        return Promise.resolve()
+        return self.receive(r.data)
       }).catch((e) => {
         self.logout()
-        if (e.headers.get('X-Authentication-Location') && !opts.preventRedirect)
+        if (e.headers&&e.headers.get('X-Authentication-Location') && !opts.preventRedirect)
           window.location.href = e.headers.get('X-Authentication-Location')
-        return error(e)
+        return Promise.reject(error(e))
       }).finally(() => {
         self.loading = false
       })
     }
-    self.receivethMightyToken = (tokenIsMightier) => {
-      let accessToken = tokenIsMightier[options.accessToken]
-      let refreshToken = tokenIsMightier[options.refreshToken]
-      if (accessToken == undefined) return error('No token received')
+    self.receive = (response) => {
+      let accessToken = response[options.accessToken]
+      let refreshToken = response[options.refreshToken]
+      if (accessToken == undefined) return Promise.reject(error('No token received'))
       let user = parseToken(accessToken)
       self.accessToken = accessToken
       self.refreshToken = localStorage['vue-identity:refreshToken'] = refreshToken
@@ -150,6 +148,7 @@ const identity = {
       self.expires = user.exp
       self.issuedAt = user.iat
       self.notBefore = user.nbf
+      return Promise.resolve()
     }
     self.attemptRefresh = () => {
       let expiresIn = (self.expires * 1000) - Date.now()
