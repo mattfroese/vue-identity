@@ -3,6 +3,10 @@ html, body {
   color: #2c3e50;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 #app {
   padding: 0 20px;
 }
@@ -21,9 +25,22 @@ a:hover {
   color: #4fc08d;
 }
 
+.error {
+  color: #d21717;
+  background: #f1dede;
+  border-radius: 4px;
+  padding: 14px;
+}
+
 pre {
-  background: whiteSmoke;
   font-size: 1.2em;
+  overflow-x: auto;
+  position: relative;
+  padding: 0;
+  background-color: #f8f8f8;
+  padding: 0.8em 0.8em 0.4em;
+  line-height: 1.1em;
+  border-radius: 2px;
 }
 
 input {
@@ -38,7 +55,8 @@ input {
   width: 100%;
 }
 
-input[type=submit] {
+button, input[type=submit] {
+  border: 0 none;
   padding: 7px;
   font-size: 1.1em;
   border-radius: 4px;

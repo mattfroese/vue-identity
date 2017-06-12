@@ -7,10 +7,10 @@ const identity = {
   defaults: {
     url: '/api',
     loginUrl: '/login',
-    logoutUrl: '/logout',
     refreshUrl: '/refresh',
     accessToken: 'token',
     refreshToken: 'refresh',
+    autoRefresh: true,
     unauthorizedRedirect: null,
     redirect: null,
     scope: null
@@ -22,14 +22,13 @@ const identity = {
     // setup
     let vm = new Vue({
       data: {
-        refreshToken: window.localStorage['vue-identity:refreshToken'],
+        refreshToken: window.localStorage['vue-identity:refresh-token'],
         accessToken: null,
         expires: null,
         user: null,
         notBefore: null,
         issuedAt: null,
-        loading: false,
-        checking: false
+        loading: false
       },
       computed: {
         expiresIn() {
@@ -114,7 +113,7 @@ const identity = {
       }))
     }
     self.logout = () => {
-      delete localStorage['vue-identity:refreshToken']
+      delete localStorage['vue-identity:refresh-token']
       self.refreshToken = null
       self.accessToken = null
       self.user = null
@@ -143,21 +142,21 @@ const identity = {
       if (accessToken == undefined) return Promise.reject(error('No token received'))
       let user = parseToken(accessToken)
       self.accessToken = accessToken
-      self.refreshToken = localStorage['vue-identity:refreshToken'] = refreshToken
+      self.refreshToken = localStorage['vue-identity:refresh-token'] = refreshToken
       self.user = user
       self.expires = user.exp
       self.issuedAt = user.iat
       self.notBefore = user.nbf
+      if( self.refreshToken && options.autoRefresh ) {
+        self.autoRefresh()
+      }
       return Promise.resolve()
     }
-    self.attemptRefresh = () => {
+    self.autoRefresh = () => {
+      if( !self.refreshToken ) return false
       let expiresIn = (self.expires * 1000) - Date.now()
-      console.info("attemptRefresh", expiresIn)
-
-      if (self.tokenValid() && expiresIn <= 300000) {
-        console.info("attemptRefresh tokenValid expiresIn <= 300000", expiresIn)
-        return self.refresh()
-      }
+      console.info("autoRefresh enabled, will refresh in", expiresIn)
+      setTimeout( self.refresh, expiresIn )
     }
     self.isLoggedIn = () => {
       return self.tokenValid()

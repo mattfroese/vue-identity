@@ -1,6 +1,6 @@
 # vue-identity
 
-`vue-identity` is a vue plugin that uses jwt to make authentication easy.
+`vue-identity` is a vue plugin that uses JSON Web Tokens to make authentication easy.
 
 ## Installation
 
@@ -32,7 +32,7 @@ this.$identity.authenticate().then(function(){ console.log( "Logged in!" ) })
 Request a new `accessToken` and `refreshToken` by passing credentials to the server. Credentials are sent as parameters of login and are `POST`ed to the server.
 
 ```javascript
-this.$identity.login({username: "salty",password:"quark"}).then(function(){ console.log( "Logged in!" ) })
+this.$identity.login({user: "salty",password:"quark"}).then(function(){ console.log( "Logged in!" ) })
 ```
 
 In your html, you can access the ``user`` state
