@@ -79,7 +79,7 @@ const identity = {
     self.uri = (endpoint) => {
       return options.url + options[endpoint + 'Url']
     }
-    self.authenticate = (options) => {
+    self.authenticate = () => {
       // I have a valid access token = good
       if (self.isLoggedIn()) return Promise.resolve()
 

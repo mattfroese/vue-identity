@@ -1,5 +1,5 @@
 /**
-  * vue-identity v0.0.6
+  * vue-identity v0.0.7
   * (c) 2017 Matt Froese
   * @license MIT
   */
@@ -122,7 +122,7 @@ var identity = {
     self.uri = function (endpoint) {
       return options.url + options[endpoint + 'Url']
     };
-    self.authenticate = function (options) {
+    self.authenticate = function () {
       // I have a valid access token = good
       if (self.isLoggedIn()) { return Promise.resolve() }
 
