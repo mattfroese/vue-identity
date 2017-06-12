@@ -1,6 +1,6 @@
 {
   "name": "vue-identity",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Simple Json Web Tokens (JWT) authentication system in Vue.",
   "author": "Matt Froese <froese.matt@gmail.com>",
   "license": "MIT",
