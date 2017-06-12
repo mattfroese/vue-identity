@@ -24,7 +24,7 @@ function error(e) {
 		err.message = e.error = e.message;
 	}
 	console.error("[VueIdentity Error]", err);
-	return Promise.reject(err)
+	return err
 }
 
 function parseToken(token) {
@@ -50,10 +50,10 @@ var identity = {
   defaults: {
     url: '/api',
     loginUrl: '/login',
-    logoutUrl: '/logout',
     refreshUrl: '/refresh',
     accessToken: 'token',
     refreshToken: 'refresh',
+    autoRefresh: true,
     unauthorizedRedirect: null,
     redirect: null,
     scope: null
@@ -65,14 +65,13 @@ var identity = {
     // setup
     var vm = new Vue({
       data: {
-        refreshToken: window.localStorage['vue-identity:refreshToken'],
+        refreshToken: window.localStorage['vue-identity:refresh-token'],
         accessToken: null,
         expires: null,
         user: null,
         notBefore: null,
         issuedAt: null,
-        loading: false,
-        checking: false
+        loading: false
       },
       computed: {
         expiresIn: function expiresIn() {
@@ -128,37 +127,36 @@ var identity = {
       if (self.isLoggedIn()) { return Promise.resolve() }
 
       // Attempt to get an access token if I have a refresh token
-      // If refresh comes back as invalid, logout and call again to attempt loginWithCredentials
+      // If refresh comes back as invalid, logout and call myself again
       if (self.refreshToken) { return self.refresh().catch(function () { return self.authenticate(); }) }
 
       // Attempt to get access token with credentials (Cookie based auth)
-      return self.loginWithCredentials(options)
+      var params = {};
+      if (options && options.scope) { params.scope = options.scope; }
+      if (options && options.redirect) { params.redirect = options.redirect; }
+      return self.request(http.get(self.uri('login'), {
+        credentials: true, // attempt with http cookies
+        params: params
+      }), opts)
     };
     // Login with fresh token
     self.refresh = function () {
-      return self.attachRequestQuarterback(http.post(self.uri('refresh'), {
+      return self.request(http.post(self.uri('refresh'), {
         token: self.refreshToken
       }))
     };
     // Login with data (username, password)
     self.login = function (data) {
-      return self.attachRequestQuarterback(http.post(self.uri('login'), data, {
+      var params = {};
+      if (options && options.scope) { params.scope = options.scope; }
+      if (options && options.redirect) { params.redirect = options.redirect; }
+      return self.request(http.post(self.uri('login'), data, {
         credentials: true,
         params: params
       }))
     };
-    // Cookie based login
-    self.loginWithCredentials = function (opts) {
-      var params = {};
-      if (options.scope) { params.scope = options.scope; }
-      if (options.redirect) { params.redirect = options.redirect; }
-      return self.attachRequestQuarterback(http.get(self.uri('login'), {
-        credentials: true,
-        params: params
-      }), opts)
-    };
     self.logout = function () {
-      delete localStorage['vue-identity:refreshToken'];
+      delete localStorage['vue-identity:refresh-token'];
       self.refreshToken = null;
       self.accessToken = null;
       self.user = null;
@@ -167,41 +165,41 @@ var identity = {
       self.notBefore = null;
       return Promise.resolve()
     };
-    self.attachRequestQuarterback = function (promise, opts) {
+    self.request = function (promise, opts) {
       opts = opts || {};
       self.loading = true;
       return promise.then(function (r) {
-        self.receivethMightyToken(r.data);
-        return Promise.resolve()
+        return self.receive(r.data)
       }).catch(function (e) {
         self.logout();
-        if (e.headers.get('X-Authentication-Location') && !opts.preventRedirect)
+        if (e.headers&&e.headers.get('X-Authentication-Location') && !opts.preventRedirect)
           { window.location.href = e.headers.get('X-Authentication-Location'); }
-        return error(e)
+        return Promise.reject(error(e))
       }).finally(function () {
         self.loading = false;
       })
     };
-    self.receivethMightyToken = function (tokenIsMightier) {
-      var accessToken = tokenIsMightier[options.accessToken];
-      var refreshToken = tokenIsMightier[options.refreshToken];
-      if (accessToken == undefined) { return error('No token received') }
+    self.receive = function (response) {
+      var accessToken = response[options.accessToken];
+      var refreshToken = response[options.refreshToken];
+      if (accessToken == undefined) { return Promise.reject(error('No token received')) }
       var user = parseToken(accessToken);
       self.accessToken = accessToken;
-      self.refreshToken = localStorage['vue-identity:refreshToken'] = refreshToken;
+      self.refreshToken = localStorage['vue-identity:refresh-token'] = refreshToken;
       self.user = user;
       self.expires = user.exp;
       self.issuedAt = user.iat;
       self.notBefore = user.nbf;
-    };
-    self.attemptRefresh = function () {
-      var expiresIn = (self.expires * 1000) - Date.now();
-      console.info("attemptRefresh", expiresIn);
-
-      if (self.tokenValid() && expiresIn <= 300000) {
-        console.info("attemptRefresh tokenValid expiresIn <= 300000", expiresIn);
-        return self.refresh()
+      if( self.refreshToken && options.autoRefresh ) {
+        self.autoRefresh();
       }
+      return Promise.resolve()
+    };
+    self.autoRefresh = function () {
+      if( !self.refreshToken ) { return false }
+      var expiresIn = (self.expires * 1000) - Date.now();
+      console.info("autoRefresh enabled, will refresh in", expiresIn);
+      setTimeout( self.refresh, expiresIn );
     };
     self.isLoggedIn = function () {
       return self.tokenValid()
